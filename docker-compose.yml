@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_URL=postgresql://user:password@db:5432/abadalink
+      - AWS_ACCESS_KEY=mocked_key
+      - AWS_SECRET_KEY=mocked_secret
+      - AWS_REGION=us-east-1
+    depends_on:
+      - db
+    volumes:
+      - .:/app # Hot reload logic if we used --reload, but useful for mapping
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=abadalink
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
