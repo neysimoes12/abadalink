@@ -1,1 +1,1 @@
-web: python -m gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
+web: python start.py
