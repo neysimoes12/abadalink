@@ -1057,3 +1057,7 @@ def send_push_to_user(user_id: uuid.UUID, title: str, body: str, url: str = "/",
 import json
 
 
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, workers=4)
