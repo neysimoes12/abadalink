@@ -123,7 +123,7 @@ export default function Profile() {
                 <div style={styles.avatarContainer}>
                     {user?.profile_image_url ? (
                         <img
-                            src={user.profile_image_url.startsWith('http') ? user.profile_image_url : `http://localhost:8000${user.profile_image_url}`}
+                            src={user.profile_image_url.startsWith('http') ? user.profile_image_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${user.profile_image_url}`}
                             alt="Profile"
                             style={styles.avatar}
                             onError={(e) => {

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import api, { getAccessToken } from "../services/api";
 import { ArrowLeft, MessageCircle, ChevronRight } from "lucide-react";
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function Conversations() {
     const navigate = useNavigate();
     const [conversations, setConversations] = useState([]);
@@ -113,7 +115,7 @@ export default function Conversations() {
                             <div style={styles.avatar}>
                                 {conv.partner_avatar ? (
                                     <img
-                                        src={conv.partner_avatar.startsWith('http') ? conv.partner_avatar : `http://localhost:8000${conv.partner_avatar}`}
+                                        src={conv.partner_avatar.startsWith('http') ? conv.partner_avatar : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${conv.partner_avatar}`}
                                         alt={conv.partner_name}
                                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                     />

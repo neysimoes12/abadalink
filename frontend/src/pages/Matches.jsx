@@ -55,7 +55,7 @@ export default function Matches() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {match.matched_listing.seller?.profile_image_url ? (
                             <img
-                                src={match.matched_listing.seller.profile_image_url.startsWith('http') ? match.matched_listing.seller.profile_image_url : `http://localhost:8000${match.matched_listing.seller.profile_image_url}`}
+                                src={match.matched_listing.seller.profile_image_url.startsWith('http') ? match.matched_listing.seller.profile_image_url : `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${match.matched_listing.seller.profile_image_url}`}
                                 alt={match.matched_listing.seller.name}
                                 style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
                             />

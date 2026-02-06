@@ -60,7 +60,8 @@ export async function subscribeToPush(registration) {
 
 export async function sendSubscriptionToServer(subscription, token) {
     try {
-        const response = await fetch('http://localhost:8000/push/subscribe', {
+        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${API_URL}/push/subscribe`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
