@@ -22,7 +22,12 @@ from auth_service import (
 )
 
 # Initialize Database Tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Startup Error: Could not connect to database: {e}")
+    # We continue so that at least /health works
+    pass
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
