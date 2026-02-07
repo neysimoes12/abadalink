@@ -1075,6 +1075,8 @@ import json
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
+    port_env = os.environ.get("PORT")
+    print(f"DEBUG: RAW PORT ENV IS: {port_env}")
+    port = int(port_env) if port_env else 8000
     print(f"Starting app on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port, workers=1)
