@@ -1,14 +1,2 @@
 fastapi
 uvicorn[standard]
-gunicorn
-sqlalchemy
-psycopg2-binary
-pydantic
-python-dotenv
-boto3
-httpx
-python-multipart
-pytest
-python-jose[cryptography]
-slowapi
-pywebpush
