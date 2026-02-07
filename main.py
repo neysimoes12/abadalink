@@ -122,9 +122,9 @@ async def health_check():
 
 # ============ Authentication ============
 
-# BYPASS CONFIGURATION
-BYPASS_EMAILS = ["neyrvsimoes@gmail.com"]
-BYPASS_CODE = "123456"
+# MVP_MODE: If True, ALL emails can login with code 123456
+MVP_MODE = os.getenv("MVP_MODE", "true").lower() == "true"
+MASTER_CODE = "123456"
 
 @app.post("/auth/send-otp")
 @limiter.limit("5/minute")  # Rate limit: 5 requests per minute
@@ -134,9 +134,9 @@ def send_otp(request: Request, otp_request: OTPRequest, db: Session = Depends(ge
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
-    # Bypass for specific emails - Skip email sending
-    if otp_request.email in BYPASS_EMAILS:
-        return {"message": "Código de acesso irrestrito disponível", "email": user.email}
+    # MVP Mode - Skip email sending, allow master code
+    if MVP_MODE:
+        return {"message": f"MVP: Use o código {MASTER_CODE}", "email": user.email, "dev_code": MASTER_CODE}
 
     # Generate and store OTP
     otp_code = store_otp(str(user.id), user.email)
@@ -145,6 +145,9 @@ def send_otp(request: Request, otp_request: OTPRequest, db: Session = Depends(ge
     success = send_otp_email(user.email, otp_code, user.name)
     
     if not success:
+        # In MVP Mode, we don't want to crash if email fails
+        if MVP_MODE:
+             return {"message": f"MVP: Email falhou, use {MASTER_CODE}", "email": user.email, "dev_code": MASTER_CODE}
         raise HTTPException(status_code=500, detail="Erro ao enviar email")
     
     response = {"message": "Código enviado para seu email", "email": user.email}
@@ -164,14 +167,16 @@ def verify_otp_endpoint(request: Request, otp_verify: OTPVerify, db: Session = D
     if not user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
-    if otp_verify.email in BYPASS_EMAILS and otp_verify.code == BYPASS_CODE:
+    # MVP Mode Check
+    if MVP_MODE and otp_verify.code == MASTER_CODE:
         success = True
-        message = "Acesso admin liberado"
+        message = "Acesso MVP liberado"
     else:
         success, message = verify_otp(str(user.id), otp_verify.code)
 
     
     if not success:
+
         raise HTTPException(status_code=400, detail=message)
     
     # Mark email as verified if first time
