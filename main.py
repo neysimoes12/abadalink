@@ -34,7 +34,13 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS Configuration - PRODUCTION READY
+# Explicitly allowing production domains to avoid env var issues
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:5177").split(",")
+ALLOWED_ORIGINS.extend([
+    "https://abadalink.vercel.app",
+    "https://www.abadalink.vercel.app",
+    "https://web-production-ffe3.up.railway.app"
+])
 
 # Add production domains if configured
 PROD_DOMAIN = os.getenv("PROD_DOMAIN")
