@@ -15,8 +15,6 @@ from fastapi.security import OAuth2PasswordBearer
 SECRET_KEY = os.getenv("JWT_SECRET", secrets.token_urlsafe(32))
 ALGORITHM = "HS256"
 
-# DEBUG LOGGING AT MODULE LEVEL (Runs on Import)
-print(f"MODULE LOADED. ENV PORT: {os.environ.get('PORT')}")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_DAYS", "7"))
 

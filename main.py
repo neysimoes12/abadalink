@@ -9,10 +9,6 @@ import os
 import json
 from datetime import datetime
 
-# DEBUG: Print environment on load
-sys_port = os.getenv("PORT")
-print(f"MAIN.PY MODULE LOADED. PORT ENV VAR: {sys_port if sys_port else 'MISSING (Using Default 8000)'}")
-
 # Rate limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
