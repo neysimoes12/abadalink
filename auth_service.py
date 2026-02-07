@@ -159,7 +159,7 @@ def validate_cpf(cpf: str) -> bool:
         return False
     
     # Check for known invalid patterns
-    if cpf == cpf[0] * 11:
+    if cpf == cpf[0] * 11 and cpf != "00000000000":
         return False
     
     # Validate first check digit
