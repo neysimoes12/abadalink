@@ -9,6 +9,9 @@ import os
 import json
 from datetime import datetime
 
+# DEBUG: Print environment on load
+print(f"MAIN.PY MODULE LOADED. PORT ENV VAR: {os.environ.get('PORT')}")
+
 # Rate limiting
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
