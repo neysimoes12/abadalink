@@ -12,6 +12,23 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Helper to generate a valid random CPF for testing/MVP
+    const generateCPF = () => {
+        const rnd = (n) => Math.round(Math.random() * n);
+        const mod = (dividend, divisor) => Math.round(dividend - (Math.floor(dividend / divisor) * divisor));
+        const n = Array(9).fill(0).map(() => rnd(9));
+
+        let d1 = n.reduce((acc, val, idx) => acc + val * (10 - idx), 0);
+        d1 = 11 - mod(d1, 11);
+        if (d1 >= 10) d1 = 0;
+
+        let d2 = n.reduce((acc, val, idx) => acc + val * (11 - idx), 0) + d1 * 2;
+        d2 = 11 - mod(d2, 11);
+        if (d2 >= 10) d2 = 0;
+
+        return [...n, d1, d2].join('');
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!email.trim()) return;
@@ -28,7 +45,7 @@ export default function Login() {
                     await api.post('/users/register', {
                         email,
                         name: email.split('@')[0],
-                        cpf: '00000000000'
+                        cpf: generateCPF() // Use random valid CPF to avoid duplicates
                     });
                     response = await api.post('/auth/send-otp', { email });
                 } else {
