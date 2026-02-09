@@ -42,7 +42,6 @@ function SellContent() {
     const [mode, setMode] = useState("EXCHANGE");
 
     const [types] = useState(["BLOCO", "CAMAROTE"]);
-    const [circuits] = useState(["BARRA ONDINA", "CAMPO GRANDE"]);
     const [days] = useState(["Quinta", "Sexta", "Sábado", "Domingo", "Segunda", "Terça"]);
     const [genders] = useState(["Masculino", "Feminino", "Unissex"]);
 
@@ -51,11 +50,11 @@ function SellContent() {
     const [formData, setFormData] = useState({
         type: "BLOCO",
         event_name: "",
-        circuit: "BARRA ONDINA",
         event_date: "Sexta",
         gender: "Unissex",
         product_value: "",
-        interest_event_name: []
+        interest_event_name: [],
+        image_url: ""
     });
 
     const [availableOptions, setAvailableOptions] = useState([]);
@@ -107,7 +106,7 @@ function SellContent() {
                 product_value: parseFloat(formData.product_value) || 0,
                 type: mode === 'BUY' ? 'PROCURA' : formData.type,
                 status: "AVAILABLE",
-                ...(mode === 'BUY' ? { event_name: "Procura-se", circuit: "N/A", event_date: "N/A", gender: "N/A" } : {})
+                ...(mode === 'BUY' ? { event_name: "Procura-se", event_date: "N/A", gender: "N/A" } : {})
             };
 
             await api.post("/market/list-abada", payload);
@@ -264,15 +263,6 @@ function SellContent() {
                                         <ChevronDown size={16} color="#9CA3AF" style={{ position: 'absolute', right: 12, top: 18, pointerEvents: 'none' }} />
                                     </div>
                                 </div>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ fontSize: '12px', fontWeight: '700', color: '#6B7280', marginBottom: '6px', display: 'block', textTransform: 'uppercase' }}>Circuito</label>
-                                    <div style={{ position: 'relative' }}>
-                                        <select style={styles.select} value={formData.circuit} onChange={e => setFormData({ ...formData, circuit: e.target.value })}>
-                                            {circuits.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                        <ChevronDown size={16} color="#9CA3AF" style={{ position: 'absolute', right: 12, top: 18, pointerEvents: 'none' }} />
-                                    </div>
-                                </div>
                             </div>
 
                             <div style={{ display: 'flex', gap: '5px' }}>
@@ -314,22 +304,24 @@ function SellContent() {
                         </div>
                     )}
 
-                    <div style={styles.card}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                            <div style={{ background: `${getThemeColor()}20`, padding: '8px', borderRadius: '10px' }}>
-                                <DollarSign size={20} color={getThemeColor()} />
+                    {mode !== 'BUY' && (
+                        <div style={styles.card}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                                <div style={{ background: `${getThemeColor()}20`, padding: '8px', borderRadius: '10px' }}>
+                                    <DollarSign size={20} color={getThemeColor()} />
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '16px' }}>Valores</h3>
+                                    <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>{mode === 'SALE' ? 'Preço de venda' : 'Diferença em dinheiro'}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '16px' }}>Valores</h3>
-                                <p style={{ margin: 0, fontSize: '12px', color: '#9CA3AF' }}>{mode === 'SALE' ? 'Preço de venda' : 'Diferença em dinheiro'}</p>
+                            <div style={{ position: 'relative' }}>
+                                <span style={{ position: 'absolute', left: '20px', top: '22px', fontSize: '20px', fontWeight: 'bold', color: '#9CA3AF' }}>R$</span>
+                                <input type="number" placeholder="0,00" style={{ ...styles.input, paddingLeft: '55px', fontSize: '24px', fontWeight: 'bold', marginBottom: 0 }}
+                                    value={formData.product_value} onChange={e => setFormData({ ...formData, product_value: e.target.value })} />
                             </div>
                         </div>
-                        <div style={{ position: 'relative' }}>
-                            <span style={{ position: 'absolute', left: '20px', top: '22px', fontSize: '20px', fontWeight: 'bold', color: '#9CA3AF' }}>R$</span>
-                            <input type="number" placeholder="0,00" style={{ ...styles.input, paddingLeft: '55px', fontSize: '24px', fontWeight: 'bold', marginBottom: 0 }}
-                                value={formData.product_value} onChange={e => setFormData({ ...formData, product_value: e.target.value })} />
-                        </div>
-                    </div>
+                    )}
 
                     <button onClick={handleSubmit} style={styles.btn} disabled={loading}>
                         {loading ? 'Calculando...' : 'FINALIZAR'}

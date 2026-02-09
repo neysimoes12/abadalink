@@ -229,3 +229,89 @@ def send_verification_success_email(to_email: str, user_name: str = "Usuário") 
     except Exception as e:
         logger.error(f"Failed to send verification email: {e}")
         return False
+
+def send_match_notification_email(
+    to_email: str, 
+    user_name: str, 
+    interested_party_name: str, 
+    listing_name: str, 
+    action_url: str = "https://abadalink.com/matches"
+) -> bool:
+    """
+    Send notification when someone shows interest in a listing
+    """
+    subject = f"🔥 Novo Match! Alguém tem interesse no seu {listing_name}"
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Segoe UI', Arial, sans-serif; background: #0f001a; color: #ffffff; padding: 20px; }}
+            .container {{ max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #1a0033, #050505); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 69, 0, 0.3); }}
+            .logo {{ text-align: center; font-size: 32px; font-weight: bold; margin-bottom: 20px; }}
+            .logo span {{ color: #FF4500; }}
+            .match-box {{ background: rgba(255, 69, 0, 0.1); border: 1px solid #FF4500; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0; }}
+            .btn {{ display: inline-block; background: #FF4500; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo"><span>ABADA</span>LINK</div>
+            
+            <p>Olá, <strong>{user_name}</strong>!</p>
+            
+            <div class="match-box">
+                <h2 style="color: #FF4500; margin: 0;">Novo Interesse!</h2>
+                <p><strong>{interested_party_name}</strong> demonstrou interesse no seu anúncio:</p>
+                <p style="font-size: 1.2em; font-weight: bold;">{listing_name}</p>
+            </div>
+            
+            <p style="text-align: center;">Vá para o chat agora mesmo e combine a troca!</p>
+            
+            <div style="text-align: center;">
+                <a href="{action_url}" class="btn">Ver Match & Conversar</a>
+            </div>
+            
+            <p style="font-size: 12px; color: #888; text-align: center; margin-top: 30px;">
+                Se o botão não funcionar, acesse sua conta em abadalink.com
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+    AbadáLink - Novo Match!
+    
+    Olá, {user_name}!
+    
+    {interested_party_name} demonstrou interesse no seu anúncio: {listing_name}.
+    
+    Acesse sua conta para conversar: {action_url}
+    """
+    
+    if not SMTP_USER or not SMTP_PASSWORD:
+        logger.warning("=" * 50)
+        logger.warning(f"📧 DEV MODE - Match Notification to: {to_email}")
+        logger.warning(f"📧 Interested: {interested_party_name} -> {listing_name}")
+        logger.warning("=" * 50)
+        return True
+    
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"AbadáLink <{SENDER_EMAIL}>"
+        msg["To"] = to_email
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
+        
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send match email: {e}")
+        return False

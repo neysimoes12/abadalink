@@ -3,12 +3,7 @@ import api, { getAccessToken, clearTokens } from '../services/api';
 import { Plus, Settings, MapPin, Tag, Pencil, X, Save, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const CIRCUITS = [
-    { name: '', label: 'Em aberto (Sem padrão)' },
-    { name: 'Dodô', label: 'Dodô - Barra-Ondina' },
-    { name: 'Osmar', label: 'Osmar - Campo Grande' },
-    { name: 'Batatinha', label: 'Batatinha - Pelourinho' }
-];
+const CIRCUITS = [];
 
 // Sort function defined outside to be safe
 const safeSort = (a, b) => (a.name || '').localeCompare(b.name || '');
@@ -57,7 +52,6 @@ function AdminConfigContent() {
     const [formData, setFormData] = useState({
         category: 'BLOCO',
         name: '',
-        default_circuit: ''
     });
 
     useEffect(() => {
@@ -106,14 +100,13 @@ function AdminConfigContent() {
         setFormData({
             category: item.category || 'BLOCO',
             name: item.name || '',
-            default_circuit: item.default_circuit || ''
         });
         // Removed window.scroll to prevent interference
     };
 
     const handleCancelEdit = () => {
         setEditingId(null);
-        setFormData({ category: 'BLOCO', name: '', default_circuit: '' });
+        setFormData({ category: 'BLOCO', name: '' });
     };
 
     const handleSubmit = async (e) => {
@@ -122,8 +115,7 @@ function AdminConfigContent() {
 
         try {
             const payload = {
-                ...formData,
-                default_circuit: formData.default_circuit === '' ? null : formData.default_circuit
+                ...formData
             };
 
             if (editingId) {
@@ -218,26 +210,7 @@ function AdminConfigContent() {
                             <input
                                 className="w-full bg-gray-800 border border-gray-700 rounded-lg h-12 px-3 text-white focus:border-secondary focus:outline-none placeholder-gray-600"
                                 placeholder="Ex: Coruja"
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                required
                             />
-                        </div>
-
-                        {/* BOX 3: CIRCUITO */}
-                        <div className="md:col-span-1">
-                            <label className="block text-xs font-bold mb-2 text-gray-400 uppercase tracking-wider">3. Circuito</label>
-                            <select
-                                className="w-full bg-gray-800 border border-gray-700 rounded-lg h-12 px-3 text-white focus:border-secondary focus:outline-none"
-                                value={formData.default_circuit}
-                                onChange={e => setFormData({ ...formData, default_circuit: e.target.value })}
-                            >
-                                {CIRCUITS.map(c => (
-                                    <option key={c.name} value={c.name}>
-                                        {c.label}
-                                    </option>
-                                ))}
-                            </select>
                         </div>
 
                         <button type="submit" className={`h-12 flex justify-center items-center gap-2 font-bold rounded-lg shadow-lg transition-all ${editingId
@@ -267,9 +240,6 @@ function AdminConfigContent() {
                                 <div key={item.id} className={`flex justify-between items-center p-3 rounded border transition-colors ${editingId === item.id ? 'bg-yellow-900/20 border-yellow-500/50' : 'bg-black/40 border-gray-800'}`}>
                                     <span className="font-bold text-gray-200">{item.name}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-500 bg-gray-900 px-2 py-1 rounded border border-gray-800">
-                                            {item.default_circuit ? (CIRCUITS.find(c => c.name === item.default_circuit)?.label || item.default_circuit) : 'Em aberto'}
-                                        </span>
                                         <button
                                             onClick={() => handleEdit(item)}
                                             className="text-gray-500 hover:text-yellow-400 p-1 rounded hover:bg-gray-800 transition-colors"
@@ -305,9 +275,6 @@ function AdminConfigContent() {
                                 <div key={item.id} className={`flex justify-between items-center p-3 rounded border transition-colors ${editingId === item.id ? 'bg-yellow-900/20 border-yellow-500/50' : 'bg-black/40 border-gray-800'}`}>
                                     <span className="font-bold text-gray-200">{item.name}</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs text-gray-500 bg-gray-900 px-2 py-1 rounded border border-gray-800">
-                                            {item.default_circuit ? (CIRCUITS.find(c => c.name === item.default_circuit)?.label || item.default_circuit) : 'Em aberto'}
-                                        </span>
                                         <button
                                             onClick={() => handleEdit(item)}
                                             className="text-gray-500 hover:text-yellow-400 p-1 rounded hover:bg-gray-800 transition-colors"

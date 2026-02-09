@@ -10,6 +10,9 @@ import Profile from './pages/Profile';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
 import Conversations from './pages/Conversations';
+import KYCUpload from './pages/KYCUpload';
+import AdminPanel from './pages/AdminPanel';
+import BottomNav from './components/BottomNav';
 
 function App() {
   return (
@@ -24,6 +27,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/verify-otp" element={<OTPVerify />} />
           <Route path="/verify-identity" element={<VerifyIdentity />} />
+          <Route path="/kyc" element={<KYCUpload />} />
 
           {/* Protected routes */}
           <Route path="/sell" element={<Sell />} />
@@ -33,7 +37,9 @@ function App() {
           <Route path="/my-listings" element={<MyListings />} />
           <Route path="/conversations" element={<Conversations />} />
           <Route path="/chat/:partnerId" element={<Chat />} />
+          <Route path="/gestao-privada" element={<AdminPanel />} />
         </Routes>
+        <BottomNav />
       </div>
     </Router>
   );

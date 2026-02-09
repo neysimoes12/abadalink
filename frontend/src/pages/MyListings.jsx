@@ -157,6 +157,19 @@ export default function MyListings() {
                 ) : (
                     listings.map(listing => (
                         <div key={listing.id} style={styles.card}>
+                            {listing.image_url && (
+                                <img
+                                    src={listing.image_url}
+                                    alt="Abadá"
+                                    style={{
+                                        width: '100%',
+                                        height: '140px',
+                                        objectFit: 'cover',
+                                        borderRadius: '12px',
+                                        marginBottom: '12px'
+                                    }}
+                                />
+                            )}
                             <div style={styles.cardHeader}>
                                 <div>
                                     <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>

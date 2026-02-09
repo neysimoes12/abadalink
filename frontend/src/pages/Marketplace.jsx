@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api, { getAccessToken } from '../services/api';
-import { Search, Home, User, Plus, Ticket, Calendar, MapPin, Heart, Repeat, ShoppingBag, ShoppingCart, X, Filter } from 'lucide-react';
+import { Search, Home, User, Plus, Ticket, Calendar, MapPin, Heart, Repeat, ShoppingBag, ShoppingCart, Filter, MessageCircle, X, Check } from 'lucide-react';
 
 export default function Marketplace() {
     const [listings, setListings] = useState([]);
@@ -10,7 +10,6 @@ export default function Marketplace() {
     const [activeTab, setActiveTab] = useState('EXCHANGE'); // 'EXCHANGE', 'SALE', or 'BUY'
     const [showFilters, setShowFilters] = useState(false);
     const [filterDay, setFilterDay] = useState('');
-    const [filterCircuit, setFilterCircuit] = useState('');
     const [filterType, setFilterType] = useState('');
     const navigate = useNavigate();
 
@@ -30,7 +29,7 @@ export default function Marketplace() {
         }
     };
 
-    const handleAction = (item) => {
+    const handleAction = async (item) => {
         if (!isLoggedIn) {
             navigate('/login', { state: { returnTo: '/market', itemId: item.id } });
             return;
@@ -40,483 +39,445 @@ export default function Marketplace() {
             return;
         }
 
-        // Different action based on type
-        if (item.type === 'PROCURA') {
-            alert(`Usuário quer comprar: ${item.interest_event_name}\nEntre em contato!`);
-        } else {
-            alert(`Proposta para: ${item.event_name}\nID: ${item.id}`);
+        const isTrade = item.interest_event_name && item.type !== 'PROCURA';
+
+        // Direct interest flow:
+        // 1. Record "INTERESTED" status
+        // 2. Open Chat
+        try {
+            await api.post('/market/matches/interaction', {
+                target_listing_id: item.id,
+                action: 'INTERESTED'
+            });
+            navigate(`/chat/${item.seller_id}`);
+            setSelectedItem(null);
+        } catch (error) {
+            console.error("Failed to record interest", error);
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                navigate('/login', { state: { returnTo: '/market', itemId: item.id } });
+            } else {
+                alert("Erro ao registrar interesse. Tente novamente.");
+            }
         }
-        setSelectedItem(null);
     };
 
-    // Filter by search term AND advanced filters
-    const searchFiltered = listings.filter(item => {
-        // Text search
-        const matchesSearch = item.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (item.interest_event_name && item.interest_event_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Filter Logic - Now Sorting/Prioritization
+    const tradeListingsRaw = listings.filter(item => item.interest_event_name && item.type !== 'PROCURA');
+    const saleListingsRaw = listings.filter(item => !item.interest_event_name && item.type !== 'PROCURA');
+    const buyListingsRaw = listings.filter(item => item.type === 'PROCURA');
 
-        // Day filter
-        const matchesDay = !filterDay || item.event_date?.includes(filterDay);
+    let currentListings = activeTab === 'EXCHANGE' ? tradeListingsRaw : activeTab === 'SALE' ? saleListingsRaw : buyListingsRaw;
 
-        // Circuit filter
-        const matchesCircuit = !filterCircuit || item.circuit?.toLowerCase().includes(filterCircuit.toLowerCase());
+    const getMatchScore = (item) => {
+        let score = 0;
+        if (searchTerm) {
+            // Prioritize exact event name match, but also check interest
+            if (item.event_name === searchTerm) score += 100;
+            else if (item.interest_event_name === searchTerm) score += 50;
+        }
+        if (filterType && item.type === filterType) score += 20;
+        if (filterDay && item.event_date?.includes(filterDay)) score += 10;
+        return score;
+    };
 
-        // Type filter
-        const matchesType = !filterType || item.type === filterType;
+    if (searchTerm || filterType || filterDay) {
+        currentListings = [...currentListings].sort((a, b) => {
+            const scoreA = getMatchScore(a);
+            const scoreB = getMatchScore(b);
+            return scoreB - scoreA; // Descending score
+        });
+    }
 
-        return matchesSearch && matchesDay && matchesCircuit && matchesType;
-    });
+    const getPlaceholderImage = (eventName, type) => {
+        // ... (existing code omitted for brevity in instruction, but keeping logic)
+    };
 
-    // Separate by type
-    const tradeListings = searchFiltered.filter(item => item.interest_event_name && item.type !== 'PROCURA');
-    const saleListings = searchFiltered.filter(item => !item.interest_event_name && item.type !== 'PROCURA');
-    const buyListings = searchFiltered.filter(item => item.type === 'PROCURA');
+    const EventLogo = ({ name, size = 26 }) => {
+        if (!name) return null;
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const colors = ['#F59E0B', '#EC4899', '#3B82F6', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
+        const color = colors[Math.abs(hash) % colors.length];
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
-    const currentListings = activeTab === 'EXCHANGE' ? tradeListings : activeTab === 'SALE' ? saleListings : buyListings;
-
-    // Placeholder images for cards
-    const getPlaceholderImage = (type, index) => {
-        const colors = ['FFD700', 'FF6B6B', '4ECDC4', '45B7D1', '96CEB4', 'FFEAA7'];
-        return `https://placehold.co/300x200/${colors[index % colors.length]}/white?text=${type}`;
+        return (
+            <div style={{
+                width: size,
+                height: size,
+                borderRadius: '8px',
+                background: color,
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: `${size / 2}px`,
+                fontWeight: '900',
+                flexShrink: 0,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                border: '2px solid white'
+            }}>
+                {initials}
+            </div>
+        );
     };
 
     return (
-        <div className="container">
+        <div className="app-container">
             {/* Header */}
-            <header className="header">
-                <div className="logo">
-                    <div className="logo-icon">
-                        <Ticket size={18} />
-                    </div>
-                    <span className="logo-text">ABADA<span>LINK</span></span>
+            <header style={{
+                height: 'var(--header-height)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 1.5rem',
+                borderBottom: '1px solid var(--border)',
+                background: 'var(--surface)',
+                position: 'sticky',
+                top: 0,
+                zIndex: 50
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <img src="/logo.png" alt="AbadáMatch" style={{ height: '70px', objectFit: 'contain' }} />
                 </div>
             </header>
 
-            {/* Search */}
-            <div className="search-container">
-                <div className="search-wrapper" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <div style={{ flex: 1, position: 'relative' }}>
-                        <Search size={20} className="search-icon" />
-                        <input
-                            type="text"
-                            className="search-bar"
-                            placeholder="Buscar evento..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
+            <div style={{ padding: '1.5rem' }}>
+                {/* Search & Filter */}
+                {/* Filters */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px', marginBottom: '1rem' }}>
+                    <select
+                        value={filterType}
+                        onChange={e => setFilterType(e.target.value)}
                         style={{
-                            background: showFilters || filterDay || filterCircuit || filterType ? 'var(--gold)' : 'white',
-                            color: showFilters || filterDay || filterCircuit || filterType ? 'white' : '#6B7280',
-                            border: '1px solid #E5E7EB',
+                            padding: '10px',
                             borderRadius: '12px',
-                            padding: '12px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text-main)',
+                            fontWeight: '500',
+                            fontSize: '0.9rem',
+                            outline: 'none',
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
+                            width: '100%'
+                        }}
+                    >
+                        <option value="">Tipo</option>
+                        <option value="BLOCO">Bloco</option>
+                        <option value="CAMAROTE">Camarote</option>
+                    </select>
+
+                    <select
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text-main)',
+                            fontWeight: '500',
+                            fontSize: '0.9rem',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            width: '100%'
+                        }}
+                    >
+                        <option value="">Evento</option>
+                        {[...new Set(listings
+                            .filter(item => !filterType || item.type === filterType)
+                            .map(item => item.event_name)
+                        )].sort().map(name => (
+                            <option key={name} value={name}>{name}</option>
+                        ))}
+                    </select>
+
+                    <select
+                        value={filterDay}
+                        onChange={e => setFilterDay(e.target.value)}
+                        style={{
+                            padding: '10px',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text-main)',
+                            fontWeight: '500',
+                            fontSize: '0.9rem',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            width: '100%'
+                        }}
+                    >
+                        <option value="">Dia</option>
+                        <option value="Quinta">Quinta</option>
+                        <option value="Sexta">Sexta</option>
+                        <option value="Sábado">Sábado</option>
+                        <option value="Domingo">Domingo</option>
+                        <option value="Segunda">Segunda</option>
+                        <option value="Terça">Terça</option>
+                    </select>
+                </div>
+
+                {(searchTerm || filterDay || filterType) && (
+                    <button
+                        onClick={() => { setSearchTerm(''); setFilterDay(''); setFilterType(''); }}
+                        className="btn"
+                        style={{
+                            background: '#FEE2E2',
+                            color: '#DC2626',
+                            fontSize: '0.875rem',
+                            padding: '0.5rem',
+                            width: '100%',
+                            marginBottom: '1.5rem',
                             justifyContent: 'center'
                         }}
                     >
-                        <Filter size={20} />
+                        Limpar Filtros
                     </button>
-                </div>
-            </div>
+                )}
 
-            {/* Filter Panel */}
-            {showFilters && (
+                {/* Tabs */}
                 <div style={{
-                    padding: '12px 20px',
-                    background: 'white',
-                    margin: '0 20px 12px',
-                    borderRadius: '16px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr 1fr',
+                    gap: '0.5rem',
+                    marginBottom: '1.5rem',
+                    background: 'var(--surface)',
+                    padding: '0.5rem',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border)'
                 }}>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                        <select
-                            value={filterDay}
-                            onChange={e => setFilterDay(e.target.value)}
-                            style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '13px' }}
-                        >
-                            <option value="">Dia</option>
-                            <option value="Quinta">Quinta</option>
-                            <option value="Sexta">Sexta</option>
-                            <option value="Sábado">Sábado</option>
-                            <option value="Domingo">Domingo</option>
-                            <option value="Segunda">Segunda</option>
-                            <option value="Terça">Terça</option>
-                        </select>
-                        <select
-                            value={filterCircuit}
-                            onChange={e => setFilterCircuit(e.target.value)}
-                            style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '13px' }}
-                        >
-                            <option value="">Circuito</option>
-                            <option value="Barra">Barra-Ondina</option>
-                            <option value="Campo">Campo Grande</option>
-                        </select>
-                        <select
-                            value={filterType}
-                            onChange={e => setFilterType(e.target.value)}
-                            style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '13px' }}
-                        >
-                            <option value="">Tipo</option>
-                            <option value="BLOCO">Bloco</option>
-                            <option value="CAMAROTE">Camarote</option>
-                        </select>
-                    </div>
-                    {(filterDay || filterCircuit || filterType) && (
+                    {[
+                        { id: 'EXCHANGE', icon: Repeat, label: 'Trocas', count: tradeListingsRaw.length },
+                        { id: 'SALE', icon: ShoppingBag, label: 'Vendas', count: saleListingsRaw.length },
+                        { id: 'BUY', icon: ShoppingCart, label: 'Compras', count: buyListingsRaw.length }
+                    ].map(tab => (
                         <button
-                            onClick={() => { setFilterDay(''); setFilterCircuit(''); setFilterType(''); }}
-                            style={{ width: '100%', padding: '8px', background: '#FEE2E2', color: '#DC2626', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                padding: '0.5rem',
+                                borderRadius: 'calc(var(--radius) - 4px)',
+                                fontSize: '0.75rem',
+                                fontWeight: '600',
+                                background: activeTab === tab.id ? 'var(--primary)' : 'transparent',
+                                color: activeTab === tab.id ? 'white' : 'var(--text-muted)',
+                                transition: 'all 0.2s',
+                                gap: '4px'
+                            }}
                         >
-                            Limpar Filtros
+                            <span>{tab.label}</span>
                         </button>
-                    )}
+                    ))}
                 </div>
-            )}
 
-            {/* Tabs - 3 options */}
-            <div style={{
-                display: 'flex',
-                padding: '0 20px',
-                marginBottom: '16px',
-                gap: '6px'
-            }}>
-                <button
-                    onClick={() => setActiveTab('EXCHANGE')}
-                    style={{
-                        flex: 1,
-                        padding: '10px 8px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        fontWeight: '700',
-                        fontSize: '0.8rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        cursor: 'pointer',
-                        background: activeTab === 'EXCHANGE' ? 'linear-gradient(135deg, var(--gold) 0%, #EC4899 100%)' : 'var(--gray-100)',
-                        color: activeTab === 'EXCHANGE' ? 'white' : 'var(--gray-500)',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <Repeat size={16} />
-                    Trocas
-                    <span style={{
-                        background: activeTab === 'EXCHANGE' ? 'rgba(255,255,255,0.3)' : 'var(--gray-200)',
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        fontSize: '0.7rem'
-                    }}>
-                        {tradeListings.length}
-                    </span>
-                </button>
-                <button
-                    onClick={() => setActiveTab('SALE')}
-                    style={{
-                        flex: 1,
-                        padding: '10px 8px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        fontWeight: '700',
-                        fontSize: '0.8rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        cursor: 'pointer',
-                        background: activeTab === 'SALE' ? 'var(--green)' : 'var(--gray-100)',
-                        color: activeTab === 'SALE' ? 'white' : 'var(--gray-500)',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <ShoppingBag size={16} />
-                    Vendas
-                    <span style={{
-                        background: activeTab === 'SALE' ? 'rgba(255,255,255,0.3)' : 'var(--gray-200)',
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        fontSize: '0.7rem'
-                    }}>
-                        {saleListings.length}
-                    </span>
-                </button>
-                <button
-                    onClick={() => setActiveTab('BUY')}
-                    style={{
-                        flex: 1,
-                        padding: '10px 8px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        fontWeight: '700',
-                        fontSize: '0.8rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '4px',
-                        cursor: 'pointer',
-                        background: activeTab === 'BUY' ? 'var(--blue)' : 'var(--gray-100)',
-                        color: activeTab === 'BUY' ? 'white' : 'var(--gray-500)',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    <ShoppingCart size={16} />
-                    Compras
-                    <span style={{
-                        background: activeTab === 'BUY' ? 'rgba(255,255,255,0.3)' : 'var(--gray-200)',
-                        padding: '2px 6px',
-                        borderRadius: '10px',
-                        fontSize: '0.7rem'
-                    }}>
-                        {buyListings.length}
-                    </span>
-                </button>
-            </div>
+                {/* Listings Grid */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr',
+                    gap: '24px',
+                    paddingBottom: '100px'
+                }}>
+                    {currentListings.map((item, index) => (
+                        <div
+                            key={item.id}
+                            className="card animate-slide-up"
+                            style={{
+                                animationDelay: `${index * 0.05}s`,
+                                padding: '0',
+                                border: 'none',
+                                borderRadius: 'var(--radius)',
+                                boxShadow: 'var(--shadow-md)',
+                                background: 'var(--surface)',
+                                overflow: 'hidden',
+                                position: 'relative'
+                            }}
+                        >
+                            {/* Card Image Area - Large & Vertical */}
+                            <div style={{
+                                width: '100%',
+                                aspectRatio: '4/3',
+                                position: 'relative',
+                                backgroundColor: '#f1f5f9'
+                            }}>
+                                <img
+                                    src={item.image_url || getPlaceholderImage(item.event_name, item.type)}
+                                    alt={item.event_name}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
 
-            {/* Cards Grid */}
-            <div className="cards-grid">
-                {currentListings.map((item, index) => (
-                    <div
-                        key={item.id}
-                        className="card animate-slideUp"
-                        style={{ animationDelay: `${index * 0.05}s` }}
-                        onClick={() => setSelectedItem(item)}
-                    >
-                        <img
-                            src={getPlaceholderImage(item.type, index)}
-                            alt={item.event_name}
-                            className="card-image"
-                        />
-                        <div className="card-content">
-                            {item.type === 'PROCURA' ? (
-                                <>
-                                    <h3 className="card-title" style={{ color: 'var(--blue)' }}>
-                                        🔎 Procurando
-                                    </h3>
-                                    <p className="card-date" style={{ fontSize: '0.85rem' }}>
-                                        {item.interest_event_name?.split(', ').slice(0, 2).join(', ')}
-                                        {item.interest_event_name?.split(', ').length > 2 && ' ...'}
-                                    </p>
-                                </>
-                            ) : (
-                                <>
-                                    <h3 className="card-title">{item.event_name}</h3>
-                                    <p className="card-date">{item.event_date}</p>
-                                </>
-                            )}
-                            <div className="card-footer">
-                                {item.product_value > 0 && (
-                                    <span className="price-tag">
-                                        R$ {item.product_value.toFixed(0)}
-                                    </span>
-                                )}
-                                {item.type !== 'PROCURA' && (
-                                    <span className={`badge ${item.type === 'BLOCO' ? 'badge-bloco' : 'badge-camarote'}`}>
-                                        {item.type}
-                                    </span>
-                                )}
+                                {/* Seller Avatar Badge - Overlapping Image */}
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '-16px',
+                                    right: '16px',
+                                    width: '48px',
+                                    height: '48px',
+                                    borderRadius: '50%',
+                                    border: '3px solid var(--surface)',
+                                    background: 'var(--surface)',
+                                    boxShadow: 'var(--shadow-sm)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 10
+                                }}>
+                                    {item.seller?.profile_image_url ? (
+                                        <img
+                                            src={item.seller.profile_image_url}
+                                            alt={item.seller.name}
+                                            style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <User size={24} color="var(--text-muted)" />
+                                    )}
+                                </div>
+
+                                {/* Type Badge (Optional - kept minimal) */}
                                 {item.type === 'PROCURA' && (
-                                    <span className="badge" style={{ background: 'var(--blue-light)', color: 'var(--blue)' }}>
-                                        COMPRA
-                                    </span>
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '12px',
+                                        left: '12px',
+                                        background: 'rgba(0,0,0,0.6)',
+                                        backdropFilter: 'blur(4px)',
+                                        color: 'white',
+                                        padding: '4px 12px',
+                                        borderRadius: '20px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600'
+                                    }}>
+                                        PROCURA
+                                    </div>
                                 )}
                             </div>
+
+                            {/* Card Content */}
+                            <div style={{ padding: '20px 16px 16px 16px' }}>
+                                {/* Title & Price Row */}
+                                <div style={{ marginBottom: '8px' }}>
+                                    <h3 style={{
+                                        fontSize: '1.125rem',
+                                        fontWeight: '700',
+                                        fontFamily: 'var(--font-heading)',
+                                        color: 'var(--text-main)',
+                                        lineHeight: '1.3',
+                                        marginBottom: '4px'
+                                    }}>
+                                        {item.type === 'PROCURA' ? 'Procurando...' : item.event_name}
+                                    </h3>
+
+                                    {activeTab === 'SALE' && item.product_value > 0 && (
+                                        <div style={{
+                                            fontSize: '1.25rem',
+                                            fontWeight: '800',
+                                            color: 'var(--primary)',
+                                            marginTop: '4px'
+                                        }}>
+                                            R$ {item.product_value.toLocaleString('pt-BR')}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Details / Interest */}
+                                <div style={{ minHeight: '40px', marginBottom: '16px' }}>
+                                    {item.type === 'PROCURA' ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-body)' }}>
+                                            <Search size={16} color="var(--secondary)" />
+                                            <span style={{ fontWeight: '500' }}>{item.interest_event_name}</span>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                                <Calendar size={14} />
+                                                <span>{item.event_date?.split('/')[0] || 'Data a definir'}</span>
+                                            </div>
+
+                                            {item.interest_event_name && (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    background: '#F1F5F9',
+                                                    padding: '8px 12px',
+                                                    borderRadius: '12px',
+                                                    marginTop: '4px'
+                                                }}>
+                                                    <Repeat size={16} color="var(--secondary)" />
+                                                    <span style={{ fontSize: '0.875rem', color: 'var(--text-body)' }}>
+                                                        Troca por <strong>{item.interest_event_name}</strong>
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Action Button */}
+                                <button
+                                    className="btn"
+                                    style={{
+                                        width: '100%',
+                                        background: (item.interest_event_name && item.type !== 'PROCURA') ? 'var(--primary)' : 'var(--secondary)',
+                                        color: 'white',
+                                        borderRadius: '12px',
+                                        padding: '12px',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        boxShadow: 'none', // Flat style inside card
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAction(item);
+                                    }}
+                                >
+                                    {(item.interest_event_name && item.type !== 'PROCURA') ? (
+                                        <>
+                                            <Repeat size={20} />
+                                            Vamos Trocar?
+                                        </>
+                                    ) : item.type === 'PROCURA' ? (
+                                        <>
+                                            <Check size={20} />
+                                            Eu tenho!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ShoppingBag size={20} />
+                                            Tenho Interesse
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Empty State */}
+                {currentListings.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                        <div style={{ background: 'var(--bg)', display: 'inline-flex', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
+                            {activeTab === 'EXCHANGE' ? <Repeat size={32} /> : activeTab === 'SALE' ? <ShoppingBag size={32} /> : <ShoppingCart size={32} />}
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontFamily: 'var(--font-heading)' }}>
+                            Nada por aqui ainda
+                        </h3>
+                        <p style={{ fontSize: '0.875rem' }}>Seja o primeiro a criar um anúncio nesta categoria!</p>
                     </div>
-                ))}
+                )}
             </div>
 
-            {/* Empty State */}
-            {currentListings.length === 0 && (
-                <div className="empty-state animate-fadeIn">
-                    <div className="empty-state-icon">
-                        {activeTab === 'EXCHANGE' ? <Repeat size={40} /> : activeTab === 'SALE' ? <ShoppingBag size={40} /> : <ShoppingCart size={40} />}
-                    </div>
-                    <h3 className="empty-state-title">
-                        {activeTab === 'EXCHANGE' ? 'Nenhuma troca disponível' : activeTab === 'SALE' ? 'Nenhuma venda disponível' : 'Nenhuma procura registrada'}
-                    </h3>
-                    <p className="empty-state-text">Seja o primeiro a anunciar!</p>
-                </div>
-            )}
+            {/* Bottom Nav */}
+            {/* Bottom Nav removed - handled globally */}
 
-            {/* Bottom Navigation */}
-            <nav className="bottom-nav">
-                <button className="nav-item active">
-                    <Home size={22} />
-                    <span>Home</span>
-                </button>
-                <button className="nav-item">
-                    <Search size={22} />
-                </button>
-                <button
-                    className="nav-fab"
-                    onClick={() => isLoggedIn ? navigate('/sell') : navigate('/login')}
-                >
-                    <Plus size={28} />
-                </button>
-                <button
-                    className="nav-item"
-                    onClick={() => isLoggedIn ? navigate('/matches') : navigate('/login')}
-                >
-                    <Heart size={22} />
-                    <span style={{ fontSize: '0.6rem' }}>Matches</span>
-                </button>
-                <button
-                    className="nav-item"
-                    onClick={() => isLoggedIn ? navigate('/profile') : navigate('/login')}
-                >
-                    <User size={22} />
-                </button>
-            </nav>
-
-            {/* Detail Modal */}
-            {selectedItem && (
-                <div className="modal-overlay animate-fadeIn" onClick={() => setSelectedItem(null)}>
-                    <div className="modal-content animate-slideUp" onClick={e => e.stopPropagation()}>
-                        <div className="modal-handle" />
-
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                            {selectedItem.type === 'PROCURA' ? (
-                                <span className="badge" style={{ background: 'var(--blue-light)', color: 'var(--blue)' }}>
-                                    <ShoppingCart size={10} style={{ marginRight: '4px' }} /> PROCURA
-                                </span>
-                            ) : (
-                                <>
-                                    <span className={`badge ${selectedItem.type === 'BLOCO' ? 'badge-bloco' : 'badge-camarote'}`}>
-                                        {selectedItem.type}
-                                    </span>
-                                    {selectedItem.interest_event_name && (
-                                        <span className="badge badge-troca">
-                                            <Repeat size={10} style={{ marginRight: '4px' }} /> Troca
-                                        </span>
-                                    )}
-                                </>
-                            )}
-                        </div>
-
-                        {selectedItem.type === 'PROCURA' ? (
-                            <>
-                                <h2 style={{ fontSize: '1.5rem', marginBottom: '16px', color: 'var(--blue)' }}>
-                                    🔎 Usuário Quer Comprar
-                                </h2>
-
-                                <div style={{
-                                    background: 'var(--blue-light)',
-                                    padding: '16px',
-                                    borderRadius: '12px',
-                                    marginBottom: '16px'
-                                }}>
-                                    <p style={{ fontSize: '0.85rem', color: 'var(--blue)', fontWeight: '600', marginBottom: '8px' }}>
-                                        Abadás procurados:
-                                    </p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                        {selectedItem.interest_event_name?.split(', ').map((name, i) => (
-                                            <span key={i} style={{
-                                                background: 'white',
-                                                padding: '6px 12px',
-                                                borderRadius: '16px',
-                                                fontSize: '0.85rem',
-                                                fontWeight: '600'
-                                            }}>
-                                                {name}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {selectedItem.product_value > 0 && (
-                                    <div style={{
-                                        background: 'var(--green-light)',
-                                        padding: '16px',
-                                        borderRadius: '12px',
-                                        marginBottom: '16px',
-                                        textAlign: 'center'
-                                    }}>
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--gray-600)', marginBottom: '4px' }}>
-                                            Orçamento disponível:
-                                        </p>
-                                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--green)' }}>
-                                            R$ {selectedItem.product_value.toFixed(2)}
-                                        </span>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <>
-                                <h2 style={{ fontSize: '1.5rem', marginBottom: '16px' }}>
-                                    {selectedItem.event_name}
-                                </h2>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', color: 'var(--gray-600)' }}>
-                                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Calendar size={16} /> {selectedItem.event_date}
-                                    </p>
-                                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <MapPin size={16} /> Circuito {selectedItem.circuit}
-                                    </p>
-                                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <User size={16} /> {selectedItem.gender}
-                                    </p>
-                                </div>
-
-                                {selectedItem.product_value > 0 && (
-                                    <div style={{
-                                        background: 'var(--green-light)',
-                                        padding: '16px',
-                                        borderRadius: '12px',
-                                        marginBottom: '16px',
-                                        textAlign: 'center'
-                                    }}>
-                                        <span style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--green)' }}>
-                                            R$ {selectedItem.product_value.toFixed(2)}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {selectedItem.interest_event_name && (
-                                    <div style={{
-                                        background: '#FEF3C7',
-                                        padding: '16px',
-                                        borderRadius: '12px',
-                                        marginBottom: '16px'
-                                    }}>
-                                        <p style={{ fontSize: '0.75rem', color: '#D97706', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Heart size={12} /> Quer trocar por:
-                                        </p>
-                                        <p style={{ fontWeight: '700' }}>{selectedItem.interest_event_name}</p>
-                                        {selectedItem.interest_type && (
-                                            <p style={{ fontSize: '0.85rem', color: 'var(--gray-600)' }}>
-                                                {selectedItem.interest_type} • {selectedItem.interest_event_date}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        <button
-                            className="btn btn-primary w-full"
-                            onClick={() => handleAction(selectedItem)}
-                        >
-                            {selectedItem.type === 'PROCURA'
-                                ? 'TENHO O QUE PROCURA!'
-                                : selectedItem.interest_event_name
-                                    ? 'PROPOR TROCA'
-                                    : 'QUERO COMPRAR'}
-                        </button>
-
-                        <button
-                            className="btn btn-ghost w-full mt-4"
-                            onClick={() => setSelectedItem(null)}
-                        >
-                            Fechar
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Modal removed as requested */}
         </div>
     );
 }

@@ -4,6 +4,7 @@ Handles token generation, validation, and user authentication
 """
 import os
 import secrets
+import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -184,3 +185,53 @@ def format_cpf(cpf: str) -> str:
     if len(cpf) == 11:
         return f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:]}"
     return cpf
+
+from dependencies import get_db
+
+def get_current_social_user(
+    current_user_id: str = Depends(get_current_user_id),
+    db: "Session" = Depends(get_db)
+) -> "User":
+    """
+    Dependency to get current user ONLY if they are eligible for Social Layer.
+    Requirements:
+    1. KYC Verified
+    2. Commercial Activity (Has Listing OR Has Proposal)
+    """
+    from database_models import User, AbadaListing, SwapProposal
+    
+    user = db.get(User, uuid.UUID(current_user_id))
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+        
+    # 1. KYC Check
+    if not user.is_verified or user.kyc_status != "VERIFIED":
+        raise HTTPException(
+            status_code=403, 
+            detail="SOCIAL_LOCKED_KYC: Realize a verificação de identidade para acessar"
+        )
+        
+    # 2. Commercial Activity Check
+    # Has listings?
+    has_listings = db.query(AbadaListing).filter(AbadaListing.seller_id == user.id).count() > 0
+    
+    # Has proposals (sent or received)?
+    has_proposals = db.query(SwapProposal).filter(
+        (SwapProposal.proposer_id == user.id) | (SwapProposal.owner_id == user.id)
+    ).count() > 0
+    
+    if not (has_listings or has_proposals):
+        raise HTTPException(
+            status_code=403,
+            detail="SOCIAL_LOCKED_ACTIVITY: Anuncie um abadá ou faça uma proposta para interagir!"
+        )
+        
+    return user
+
+
+def get_simple_user(current_user_id: str = Depends(get_current_user_id), db: "Session" = Depends(get_db)) -> "User":
+    from database_models import User
+    u = db.get(User, uuid.UUID(current_user_id))
+    if not u:
+        raise HTTPException(status_code=401, detail='User not found')
+    return u

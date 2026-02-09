@@ -122,6 +122,8 @@ export default function VerifyIdentity() {
 
             if (response.data.kyc_status === 'VERIFIED') {
                 localStorage.setItem('kycStatus', 'VERIFIED');
+                window.location.href = '/market';
+                return;
             }
 
         } catch (err) {
@@ -135,9 +137,13 @@ export default function VerifyIdentity() {
     };
 
     // Navigate based on result
+    // Navigate based on result
     const handleContinue = () => {
-        if (result?.kyc_status === 'VERIFIED') {
-            navigate('/market');
+        console.log("Handle Continue Clicked", result);
+        if (result && result.kyc_status === 'VERIFIED') {
+            console.log("Navigating to market...");
+            // Force hard redirect to ensure state is fresh and navigation happens
+            window.location.href = '/market';
         } else {
             // Reset for retry
             setStep(1);
@@ -157,13 +163,11 @@ export default function VerifyIdentity() {
             // Call a special dev endpoint or just simulate success
             const response = await api.post('/dev/bypass-kyc', { user_id: userId });
             localStorage.setItem('kycStatus', 'VERIFIED');
-            setResult({ kyc_status: 'VERIFIED', message: 'Verificação ignorada (modo dev)' });
-            setStep(3);
+            window.location.href = '/market';
         } catch (err) {
             // Even if endpoint doesn't exist, simulate success in dev mode
             localStorage.setItem('kycStatus', 'VERIFIED');
-            setResult({ kyc_status: 'VERIFIED', message: 'Verificação ignorada (modo dev)' });
-            setStep(3);
+            window.location.href = '/market';
         } finally {
             setLoading(false);
         }

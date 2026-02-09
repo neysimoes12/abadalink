@@ -12,3 +12,4 @@ pytest
 python-jose[cryptography]
 slowapi
 pywebpush
+cloudinary

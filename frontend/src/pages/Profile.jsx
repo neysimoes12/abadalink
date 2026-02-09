@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { getAccessToken } from "../services/api";
-import { ArrowLeft, Camera, User, LogOut } from "lucide-react";
+import { ArrowLeft, Camera, User, LogOut, Shield, MessageCircle, Home, Heart } from "lucide-react";
 
 export default function Profile() {
     const navigate = useNavigate();
@@ -50,7 +50,7 @@ export default function Profile() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem("token");
+        localStorage.clear(); // Clear all data (tokens, user info, etc)
         navigate("/login");
     };
 
@@ -128,7 +128,8 @@ export default function Profile() {
                             style={styles.avatar}
                             onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "https://ui-avatars.com/api/?name=" + user.name.replace(" ", "+");
+                                const safeName = user?.name ? user.name.replace(/\s+/g, "+") : "User";
+                                e.target.src = "https://ui-avatars.com/api/?name=" + safeName;
                             }}
                         />
                     ) : (
@@ -163,43 +164,73 @@ export default function Profile() {
                     </span>
                 )}
 
-                <div style={{ width: '100%', marginTop: '40px' }}>
-                    <button onClick={() => navigate('/my-listings')} style={{
-                        width: '100%',
-                        padding: '15px',
-                        background: '#F3F4F6',
-                        color: '#374151',
-                        border: 'none',
-                        borderRadius: '12px',
+                {!user?.is_verified && user?.kyc_status !== 'PENDING' && (
+                    <button
+                        onClick={() => navigate('/kyc')}
+                        style={{
+                            marginTop: '10px',
+                            background: 'var(--blue)',
+                            color: 'white',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 5px rgba(59, 130, 246, 0.3)'
+                        }}
+                    >
+                        <Shield size={14} />
+                        Verificar Identidade
+                    </button>
+                )}
+
+                {user?.kyc_status === 'PENDING' && (
+                    <span style={{
+                        marginTop: '10px',
+                        background: '#FFF7ED',
+                        color: '#C2410C',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
                         fontWeight: 'bold',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        cursor: 'pointer',
-                        marginBottom: '12px'
+                        gap: '5px'
                     }}>
-                        📋 Meus Anúncios
-                    </button>
-                    <button onClick={handleLogout} style={{
-                        width: '100%',
-                        padding: '15px',
-                        background: '#FEE2E2',
-                        color: '#991B1B',
-                        border: 'none',
-                        borderRadius: '12px',
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px',
-                        cursor: 'pointer'
-                    }}>
-                        <LogOut size={20} />
-                        Sair da Conta
-                    </button>
+                        ⏳ Verificação em Análise
+                    </span>
+                )}
+
+                <div className="animate-slideUp" style={{ width: '100%', maxWidth: '320px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <button onClick={() => navigate('/my-listings')} className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start' }}>
+                            <span style={{ fontSize: '1.2rem', marginRight: '8px' }}>📋</span> Meus Anúncios
+                        </button>
+
+                        <button onClick={() => navigate('/conversations')} className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start' }}>
+                            <span style={{ fontSize: '1.2rem', marginRight: '8px' }}>💬</span> Minhas Conversas
+                        </button>
+
+                        {user?.is_admin && (
+                            <button onClick={() => navigate('/gestao-privada')} className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start', borderColor: '#F59E0B', color: '#B45309' }}>
+                                <span style={{ fontSize: '1.2rem', marginRight: '8px' }}>🔐</span> Painel Admin
+                            </button>
+                        )}
+
+                        <button onClick={handleLogout} className="btn w-full" style={{ justifyContent: 'flex-start', background: '#FEE2E2', color: '#DC2626', border: 'none' }}>
+                            <LogOut size={20} style={{ marginRight: '8px' }} />
+                            Sair da Conta
+                        </button>
+                    </div>
                 </div>
             </main>
+
+            {/* Bottom Nav */}
+            {/* Bottom Nav removed - handled globally */}
         </div>
     );
 }

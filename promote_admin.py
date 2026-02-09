@@ -1,23 +1,21 @@
 import sys
-from sqlalchemy import select
+import uuid
 from sqlalchemy.orm import Session
 from database_models import engine, User
 
-def promote_to_admin(email):
+def promote_user(email):
     with Session(engine) as session:
-        stmt = select(User).where(User.email == email)
-        user = session.execute(stmt).scalar_one_or_none()
-        
+        user = session.query(User).filter(User.email == email).first()
         if not user:
-            print(f"❌ User with email '{email}' not found.")
+            print(f"Erro: Usuário com email {email} não encontrado.")
             return
         
         user.is_admin = True
         session.commit()
-        print(f"✅ User '{user.name}' ({email}) is now an ADMIN.")
+        print(f"Sucesso: {user.name} ({email}) agora é administrador!")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python promote_admin.py <email>")
+        print("Uso: python promote_admin.py seu_email@exemplo.com")
     else:
-        promote_to_admin(sys.argv[1])
+        promote_user(sys.argv[1])

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { setupPushNotifications } from '../services/push';
-import { ArrowLeft, Loader, RefreshCw, Sparkles, CheckCircle, Ticket } from 'lucide-react';
+import { ArrowLeft, Loader, RefreshCw, Sparkles, CheckCircle, Mail } from 'lucide-react';
 
 export default function OTPVerify() {
     const navigate = useNavigate();
@@ -131,124 +131,160 @@ export default function OTPVerify() {
 
     if (success) {
         return (
-            <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-                <div className="animate-fadeIn" style={{ textAlign: 'center' }}>
+            <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--background)' }}>
+                <div className="animate-scale-in" style={{ textAlign: 'center' }}>
                     <div style={{
-                        width: '80px', height: '80px', margin: '0 auto 16px',
-                        background: 'var(--green-light)', borderRadius: '50%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        width: '100px', height: '100px', margin: '0 auto 24px',
+                        background: '#DCFCE7', borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 0 0 10px #F0FDF4'
                     }}>
-                        <CheckCircle size={48} style={{ color: 'var(--green)' }} />
+                        <CheckCircle size={56} style={{ color: '#16A34A' }} />
                     </div>
-                    <p style={{ fontWeight: '700', fontSize: '1.25rem' }}>Verificado!</p>
+                    <h2 style={{ fontWeight: '800', fontSize: '1.75rem', color: '#16A34A', marginBottom: '8px' }}>Verificado!</h2>
+                    <p style={{ color: 'var(--text-muted)' }}>Entrando na folia...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div className="container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', padding: '24px', background: 'var(--background)' }}>
             {/* Header */}
-            <div style={{ padding: '16px 20px' }}>
-                <button className="btn btn-ghost" onClick={() => navigate('/login')}>
+            <div>
+                <button className="btn btn-ghost" onClick={() => navigate('/login')} style={{ paddingLeft: 0, color: 'var(--text-muted)' }}>
                     <ArrowLeft size={18} />
-                    Voltar
+                    <span style={{ marginLeft: '8px' }}>Voltar</span>
                 </button>
             </div>
 
             {/* Content */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                {/* Logo */}
-                <div className="logo" style={{ marginBottom: '32px' }}>
-                    <div className="logo-icon" style={{ width: '48px', height: '48px' }}>
-                        <Ticket size={24} />
-                    </div>
-                </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
 
-                <h1 style={{ fontSize: '1.5rem', marginBottom: '8px', textAlign: 'center' }}>
-                    Verificar Email
-                </h1>
-                <p style={{ color: 'var(--gray-500)', marginBottom: '32px', textAlign: 'center' }}>
-                    Enviamos um código para <span style={{ color: 'var(--gold)', fontWeight: '600' }}>{email}</span>
-                </p>
-
-                {/* Dev Code */}
-                {devCode && (
+                <div className="animate-slide-up card" style={{
+                    width: '100%',
+                    maxWidth: '400px',
+                    padding: '32px',
+                    borderRadius: '32px',
+                    boxShadow: 'var(--shadow-lg)',
+                    textAlign: 'center'
+                }}>
                     <div style={{
-                        background: '#FEF3C7',
-                        border: '1px solid #FCD34D',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        marginBottom: '24px',
-                        textAlign: 'center',
-                        width: '100%',
-                        maxWidth: '320px'
+                        width: '64px', height: '64px',
+                        background: '#F0F9FF', borderRadius: '24px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto 24px',
+                        color: 'var(--primary)'
                     }}>
-                        <div style={{
-                            display: 'inline-flex', alignItems: 'center', gap: '4px',
-                            fontSize: '0.7rem', fontWeight: '700', color: '#D97706',
-                            marginBottom: '8px'
-                        }}>
-                            <Sparkles size={12} /> MODO DEV
-                        </div>
-                        <p style={{ fontSize: '1.75rem', fontFamily: 'monospace', fontWeight: '800', letterSpacing: '0.3em' }}>
-                            {devCode}
-                        </p>
+                        <Mail size={32} />
                     </div>
-                )}
 
-                {/* OTP Inputs */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }} onPaste={handlePaste}>
-                    {code.map((digit, index) => (
-                        <input
-                            key={index}
-                            ref={el => inputRefs.current[index] = el}
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={1}
-                            value={digit}
-                            onChange={(e) => handleChange(index, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(index, e)}
-                            disabled={loading}
-                            style={{
-                                width: '48px',
-                                height: '56px',
-                                textAlign: 'center',
-                                fontSize: '1.5rem',
-                                fontWeight: '700',
-                                borderRadius: '12px',
-                                border: `2px solid ${error ? '#DC2626' : digit ? 'var(--gold)' : 'var(--gray-200)'}`,
-                                background: 'white',
-                                outline: 'none',
-                                transition: 'all 0.2s'
-                            }}
-                        />
-                    ))}
-                </div>
-
-                {error && (
-                    <p style={{ color: '#DC2626', fontSize: '0.875rem', marginBottom: '16px' }}>
-                        {error}
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '12px', fontFamily: 'var(--font-heading)' }}>
+                        Verifique seu Email
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.5' }}>
+                        Enviamos um código para<br />
+                        <span style={{ color: 'var(--text-main)', fontWeight: '700' }}>{email}</span>
                     </p>
-                )}
 
-                <button
-                    className="btn btn-primary"
-                    onClick={() => handleVerify(code.join(''))}
-                    disabled={loading || code.join('').length < 6}
-                    style={{ width: '100%', maxWidth: '320px', marginBottom: '16px' }}
-                >
-                    {loading ? <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} /> : 'Verificar'}
-                </button>
+                    {/* Dev Code */}
+                    {devCode && (
+                        <div style={{
+                            background: '#FFFBEB',
+                            border: '1px solid #FCD34D',
+                            borderRadius: '16px',
+                            padding: '16px',
+                            marginBottom: '32px',
+                            animation: 'pulse 2s infinite'
+                        }}>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                fontSize: '0.75rem', fontWeight: '800', color: '#D97706',
+                                marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px'
+                            }}>
+                                <Sparkles size={14} /> MODO DEV
+                            </div>
+                            <div style={{ fontSize: '2rem', fontFamily: 'monospace', fontWeight: '800', letterSpacing: '0.2em', color: '#B45309' }}>
+                                {devCode}
+                            </div>
+                        </div>
+                    )}
 
-                <button
-                    className="btn btn-ghost"
-                    onClick={handleResend}
-                    disabled={countdown > 0 || resending}
-                >
-                    {resending ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={14} />}
-                    {countdown > 0 ? `Reenviar em ${countdown}s` : 'Reenviar código'}
-                </button>
+                    {/* OTP Inputs */}
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '32px' }} onPaste={handlePaste}>
+                        {code.map((digit, index) => (
+                            <input
+                                key={index}
+                                ref={el => inputRefs.current[index] = el}
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(e) => handleChange(index, e.target.value)}
+                                onKeyDown={(e) => handleKeyDown(index, e)}
+                                disabled={loading}
+                                style={{
+                                    width: '48px',
+                                    height: '56px',
+                                    textAlign: 'center',
+                                    fontSize: '1.5rem',
+                                    fontWeight: '700',
+                                    borderRadius: '16px',
+                                    border: `2px solid ${error ? '#DC2626' : digit ? 'var(--primary)' : '#E2E8F0'}`,
+                                    background: digit ? '#FFF1F2' : '#F8FAFC',
+                                    outline: 'none',
+                                    transition: 'all 0.2s',
+                                    color: 'var(--text-main)'
+                                }}
+                                className="otp-input"
+                            />
+                        ))}
+                    </div>
+
+                    {error && (
+                        <div className="animate-shake" style={{ color: '#DC2626', fontSize: '0.9rem', marginBottom: '24px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <span>⚠️</span> {error}
+                        </div>
+                    )}
+
+                    <button
+                        className="btn"
+                        onClick={() => handleVerify(code.join(''))}
+                        disabled={loading || code.join('').length < 6}
+                        style={{
+                            width: '100%',
+                            padding: '16px',
+                            borderRadius: '20px',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            fontWeight: '700',
+                            fontSize: '1rem',
+                            boxShadow: '0 4px 15px rgba(225, 29, 72, 0.4)',
+                            opacity: (loading || code.join('').length < 6) ? 0.7 : 1,
+                            cursor: (loading || code.join('').length < 6) ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {loading ? <Loader size={22} className="animate-spin animate-center-self" style={{ margin: '0 auto' }} /> : 'Verificar Código'}
+                    </button>
+
+                    <div style={{ marginTop: '24px' }}>
+                        <button
+                            onClick={handleResend}
+                            disabled={countdown > 0 || resending}
+                            style={{
+                                background: 'none', border: 'none',
+                                color: 'var(--text-muted)',
+                                fontSize: '0.9rem',
+                                cursor: (countdown > 0 || resending) ? 'default' : 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                margin: '0 auto'
+                            }}
+                        >
+                            {resending ? <Loader size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                            {countdown > 0 ? `Reenviar em ${countdown}s` : 'Não recebeu? Reenviar'}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );
