@@ -2,13 +2,18 @@ from database_models import Base, engine, User, EventItem
 from sqlalchemy.orm import sessionmaker
 import uuid
 
-# Confirmation
-print("⚠️  ATENÇÃO: Isso apagará TODOS os dados do banco de dados!")
-confirm = input("Digite 'CONFIRMAR' para continuar: ")
+import sys
 
-if confirm != "CONFIRMAR":
-    print("Operação cancelada.")
-    exit()
+# Confirmation
+if "--force" in sys.argv:
+    print("⚠️  MODO FORCE: Resetando banco sem confirmação...")
+else:
+    print("⚠️  ATENÇÃO: Isso apagará TODOS os dados do banco de dados!")
+    confirm = input("Digite 'CONFIRMAR' para continuar: ")
+
+    if confirm != "CONFIRMAR":
+        print("Operação cancelada.")
+        exit()
 
 print("🗑️  Apagando tabelas...")
 Base.metadata.drop_all(bind=engine)
