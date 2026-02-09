@@ -1659,6 +1659,18 @@ def dev_bypass_kyc(req: DevBypassRequest, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "KYC Bypassed"}
 
+@app.get("/dev/populate")
+def dev_populate(db: Session = Depends(get_db)):
+    """Temporary endpoint to populate listings if deployment failed"""
+    try:
+        # Run populate_listings logic dynamically
+        # We use subprocess to run it as a script to avoid session conflicts or imports
+        import subprocess
+        result = subprocess.run(["python", "populate_listings.py"], capture_output=True, text=True)
+        return {"message": "Population script executed", "stdout": result.stdout, "stderr": result.stderr}
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     port_env = os.environ.get("PORT")
